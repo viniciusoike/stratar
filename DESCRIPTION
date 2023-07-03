@@ -14,5 +14,8 @@ Depends:
 RoxygenNote: 7.2.3
 Imports: 
     data.table,
+    dplyr,
     glue,
-    haven
+    haven,
+    readr,
+    tidyr
