@@ -161,7 +161,7 @@ census_estimate_wgt <- function(dat, type = "apartment", operation = "rent") {
   )
 
   # Convert to data.table
-  if (!is.data.table(dat)) {
+  if (!inherits(dat, "data.table")) {
     data.table::setDT(dat)
   }
 
@@ -212,8 +212,8 @@ census_estimate_wgt <- function(dat, type = "apartment", operation = "rent") {
 
   # Compute contingency-tables using weights (much faster than survey::svytotal)
   # If confidence-interval is needed use survey
-  count  <- xtabs(weight ~ code_weighting_area + hh_rooms, data = sub)
-  income <- xtabs(hh_income * weight ~ code_weighting_area + hh_rooms, data = sub)
+  count  <- stats::xtabs(weight ~ code_weighting_area + hh_rooms, data = sub)
+  income <- stats::xtabs(hh_income * weight ~ code_weighting_area + hh_rooms, data = sub)
 
   # Convert tables to data.table
   count <- data.table::setDT(as.data.frame(count))
@@ -222,9 +222,9 @@ census_estimate_wgt <- function(dat, type = "apartment", operation = "rent") {
   # Estimate total number of households + avg. income
   tbl_summary <- sub[
     hh_income > 0,
-    .(avg_income = weighted.mean(hh_income, weight),
-      avg_rent = weighted.mean(rent, weight),
-      avg_rent_mw = weighted.mean(rent_mw, weight),
+    .(avg_income = stats::weighted.mean(hh_income, weight),
+      avg_rent = stats::weighted.mean(rent, weight),
+      avg_rent_mw = stats::weighted.mean(rent_mw, weight),
       total_household = mean(n_household)),
     by = "code_weighting_area"
   ]
