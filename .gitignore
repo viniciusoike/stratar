@@ -49,3 +49,6 @@ po/*~
 rsconnect/
 
 data-raw/ibge/
+data-raw/microdata_14muni/
+data-raw/tabelas_municipios_areas_redefinidas_ods/
+data-raw/tabelas_municipios_areas_redefinidas_xls/
