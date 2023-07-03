@@ -3,77 +3,89 @@
 #' Uses 2010 Census household microdata to estimate strata weights. Currently
 #' supports income and count weighting by number of bedrooms.
 #'
-#' @param state Two letter abbreviation of the state
+#' @param state Two letter abbreviation of the state. This option assumes the Census
+#' microdata has been downloaded and unziped in the `dir` directory.
 #' @param dir Path to the Census microdata directory. Defaults to `NULL` assuming
 #' standard file names.
 #' @param export Logical indicating if results should be exported locally. Defaults
 #' to `FALSE`.
 #' @param variable One of `count`, `income`, or `all` (default).
+#' @param tbl A `tibble` created by `census_estimate_wgt`.
 #'
 #' @return A `data.table` with Census totals on columns by weighting area.
 #' @export
 get_census_weights <- function(
-    state = "AC",
+    tbl,
+    state,
     dir = NULL,
     export = FALSE,
     variable = "all") {
 
   # Check inputs
 
-  # State must be a valid 2 letter state abbreviation
-  all_states <- c(
-    "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS",
-    "MT", "PA", "PB", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC",
-    "SE", "SP", "TO"
-  )
-
-  if (!any(state %in% all_states)) {
-    stop(paste("State must be one of: ", paste(all_states, collapse = ", ")))
-  }
-
   # Variable must be one of count, income, or all
   stopifnot(any(variable %in% c("count", "income", "all")))
 
-  # Import and process weights
+  if (!missing(state)) {
 
-  message(glue::glue("Importing Census microdata for: {state}."))
-  dat <- census_import_state(state, dir)
-  message("Computing weights...")
-  wgt <- census_estimate_wgt(dat)
+    # State must be a valid 2 letter state abbreviation
+    all_states <- c(
+      "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS",
+      "MT", "PA", "PB", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC",
+      "SE", "SP", "TO"
+    )
+
+    if (!any(state %in% all_states)) {
+      stop(paste("State must be one of:", paste(all_states, collapse = ", ")))
+    }
+
+    # Import and process weights
+    message(glue::glue("Importing Census microdata for: {state}."))
+    dat <- census_import_state(state, dir)
+    message("Computing weights...")
+    wgt <- census_estimate_wgt(dat)
+
+  } else if (!missing(tbl)) {
+    wgt <- tbl
+  }
 
   if (variable != "all") {
     # Get the table
     out <- wgt[[variable]]
-    # Create the code_muni column
-    out[, code_muni := substr(code_weighting_area, 1, 7)]
-    # Pivot table
-    out <- data.table::dcast(
-      out,
-      code_weighting_area + code_muni ~ hh_rooms,
-      value.var = "Freq"
-    )
+
+    # Create the code_muni column and pivot
+    out <- out |>
+      dplyr::mutate(code_muni = substr(code_weighting_area, 1, 7)) |>
+      tidyr::pivot_wider(
+        id_cols = c("code_weighting_area", "code_muni"),
+        names_from = "hh_rooms",
+        names_sort = TRUE,
+        values_from = "n"
+      )
 
   } else {
 
     # Stack tables together
-    out <- data.table::rbindlist(wgt[c("count", "income")], idcol = "variable")
-    # Create the code_muni column
-    out[, code_muni := substr(code_weighting_area, 1, 7)]
-    # Pivot table
-    out <- data.table::dcast(
-      out,
-      code_weighting_area + code_muni ~ variable + hh_rooms,
-      value.var = "Freq"
-    )
+    out <- dplyr::bind_rows(wgt[c("count", "income")], .id = "variable")
+    # Create the code_muni column and pivot
+    out <- out |>
+      dplyr::mutate(code_muni = substr(code_weighting_area, 1, 7)) |>
+      tidyr::pivot_wider(
+        id_cols = c("code_weighting_area", "code_muni"),
+        names_from = c("variable", "hh_rooms"),
+        names_sort = TRUE,
+        values_from = "n"
+      )
+
+    out <- dplyr::full_join(out, wgt[["agg"]], by = "code_weighting_area")
 
   }
 
+  # Export locally if export = TRUE
   if (isTRUE(export)) {
     path_out <- here::here(dir, glue::glue("wgt_{state}_dom.csv"))
-    data.table::fwrite(out, path_out)
-
+    readr::write_csv(out, path_out)
     message("File exported to ", path_out)
-
   }
 
   return(out)
@@ -93,7 +105,6 @@ census_import_state <- function(state, dir = NULL, label = FALSE) {
   stopifnot(length(filenm) >= 1)
   # Check if file exists
   stopifnot(file.exists(path))
-
   # Import using haven
   census <- haven::read_dta(path)
 
@@ -101,8 +112,7 @@ census_import_state <- function(state, dir = NULL, label = FALSE) {
     # Return labelled tibble
     return(census)
   } else {
-    # Return a non-labelled data.table (faster data manipulation)
-    census <- data.table::setDT(census)
+    # Return a non-labelled data.frame (faster data manipulation)
     census <- haven::zap_label(census)
     census <- haven::zap_labels(census)
     census <- haven::zap_formats(census)
@@ -134,11 +144,10 @@ census_import_state <- function(state, dir = NULL, label = FALSE) {
 #'
 #' @return A named list
 census_estimate_wgt <- function(dat, type = "apartment", operation = "rent") {
-
+  # browser()
   stopifnot(is.data.frame(dat))
   stopifnot(any(type %in% c("apartment", "house")))
   stopifnot(any(operation %in% c("rent", "sale")))
-
 
   # Named vector with census variable dictionary
   census_variables <- c(
@@ -160,95 +169,82 @@ census_estimate_wgt <- function(dat, type = "apartment", operation = "rent") {
     "rent_mw" = "v2012"
   )
 
-  # Convert to data.table
-  if (!inherits(dat, "data.table")) {
-    data.table::setDT(dat)
-  }
-
   # Rename and select columns
-  dat <- dat[, ..census_variables]
-  setnames(dat, names(dat), names(census_variables))
+  dat <- dplyr::select(dat, dplyr::all_of(census_variables))
+
+  # Convert columns to appropriate types
+  fct_cols <- c("hh_type", "hh_ownership", "hh_private", "code_weighting_area")
+  num_cols <- c("hh_rooms", "hh_income", "rent", "rent_mw", "weight")
+
+  dat <- dat |>
+    dplyr::mutate(dplyr::across(dplyr::all_of(fct_cols), as.factor)) |>
+    dplyr::mutate(dplyr::across(dplyr::all_of(num_cols), as.numeric))
 
   # Filter only valid households "private permanent households". This excludes
   # non-private households (such as prisons, or retirement homes) and inappropriate
   # housing
-  dat <- dat[hh_private == 1]
-  # Remove zero income households. This creates an upwards bias in estimates
-  # but is more useful for index analysis
-  dat <- dat[hh_income > 0]
+  dat <- dplyr::filter(dat, hh_private == "01")
+  dat <- dplyr::filter(dat, hh_income > 0)
 
-  # Find total number of households per strata
-  dat[, n_household := sum(weight, na.rm = TRUE), by = "code_weighting_area"]
+  tbl_household <- dat |>
+    dplyr::summarise(
+      n_household = sum(weight, na.rm = TRUE), .by = "code_weighting_area"
+    )
 
-  # Truncate number of rooms
-  dat[, hh_rooms := ifelse(hh_rooms >= 4, 4, hh_rooms)]
-
-  # Convert columns to appropriate types
-  fct_cols <- c("hh_rooms", "hh_type", "hh_ownership", "code_weighting_area")
-  num_cols <- c("hh_income", "rent", "rent_mw")
-
-  dat <- dat[, (fct_cols) := lapply(.SD, as.factor), .SDcols = fct_cols]
-  dat <- dat[, (num_cols) := lapply(.SD, as.numeric), .SDcols = num_cols]
-
-  # dat[, hh_rooms := factor(hh_rooms)]
-  # dat[, hh_type := factor(hh_type)]
-  # dat[, code_weighting_area := factor(code_weighting_area)]
+  dat <- dplyr::left_join(dat, tbl_household, by = "code_weighting_area")
+  # Truncate house rooms and then convert to factor
+  dat <- dplyr::mutate(dat, hh_rooms = ifelse(hh_rooms >= 4, 4, hh_rooms))
+  dat <- dplyr::mutate(dat, hh_rooms = factor(hh_rooms))
 
   # Filter rows
   if (type == "apartment") {
-    sub <- dat[hh_type == "13"]
+    sub <- dplyr::filter(dat, hh_type == "13")
   } else if (type == "house") {
-    sub <- dat[hh_type %in% c("11", "12")]
+    sub <- dplyr::filter(dat, hh_type %in% c("11", "12"))
   }
 
   if (operation == "rent") {
-    sub <- sub[hh_ownership == "3"]
+    sub <- dplyr::filter(sub, hh_ownership == "3")
   } else if (operation == "sale") {
-    sub <- sub[hh_ownership %in% c("1", "2")]
+    sub <- dplyr::filter(sub, hh_ownership %in% c("1", "2"))
   }
-
-  # Remove NAs
-  # sub <- na.omit(sub)
 
   # Compute contingency-tables using weights (much faster than survey::svytotal)
   # If confidence-interval is needed use survey
   count  <- stats::xtabs(weight ~ code_weighting_area + hh_rooms, data = sub)
   income <- stats::xtabs(hh_income * weight ~ code_weighting_area + hh_rooms, data = sub)
 
-  # Convert tables to data.table
-  count <- data.table::setDT(as.data.frame(count))
-  income <- data.table::setDT(as.data.frame(income))
-
   # Estimate total number of households + avg. income
-  tbl_summary <- sub[
-    hh_income > 0,
-    .(avg_income = stats::weighted.mean(hh_income, weight),
+  tbl_summary <- sub |>
+    dplyr::filter(hh_income > 0) |>
+    dplyr::summarise(
+      avg_income = stats::weighted.mean(hh_income, weight),
       avg_rent = stats::weighted.mean(rent, weight),
       avg_rent_mw = stats::weighted.mean(rent_mw, weight),
-      total_household = mean(n_household)),
-    by = "code_weighting_area"
-  ]
-
+      total_household = mean(n_household),
+      .by = "code_weighting_area"
+    )
   # Estimate shares
-  dat[, is_rental := 0][hh_ownership == "3", is_rental := 1]
-  dat[, is_apartment := 0][hh_type == "13", is_apartment := 1]
-  dat[, is_owned := 0][hh_ownership %in% c("1", "2"), is_rental := 1]
-  dat[, is_house := 0][hh_type %in% c("11", "12"), is_apartment := 1]
-
-  tbl_shares <- dat[
-    hh_income > 0,
-    .(
-      share_rental = sum(is_rental) / .N,
-      share_apartment = sum(is_apartment) / .N,
-      share_owned = sum(is_owned) / .N,
-      share_house = sum(is_house) / .N
-    ),
-    by = "code_weighting_area"
-  ]
-
+  tbl_shares <- dat |>
+    dplyr::mutate(
+      is_rental = ifelse(hh_ownership == "3", 1L, 0L),
+      is_apartment = ifelse(hh_type == "13", 1L, 0L),
+      is_owned = ifelse(hh_ownership %in% c("1", "2"), 1L, 0L),
+      is_house = ifelse(hh_type %in% c("11", "12"), 1L, 0L)
+    ) |>
+    dplyr::filter(hh_income > 0) |>
+    dplyr::summarise(
+      share_rental = sum(is_rental) / dplyr::n(),
+      share_apartment = sum(is_apartment) / dplyr::n(),
+      share_owned = sum(is_owned) / dplyr::n(),
+      share_house = sum(is_house) / dplyr::n(),
+      .by = "code_weighting_area"
+    )
   # Full join both the summary and the shares table
-  agg <- merge(tbl_summary, tbl_shares, all.x = TRUE, all.y = TRUE)
+  agg <- dplyr::full_join(tbl_summary, tbl_shares, by = "code_weighting_area")
+  # Return output as a list of tibbles
   out <- list(agg = agg, count = count, income = income)
+  out <- lapply(out, tibble::as_tibble)
   return(out)
 
 }
