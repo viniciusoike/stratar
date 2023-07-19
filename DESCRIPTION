@@ -1,9 +1,9 @@
-Package: rppiwgt
+Package: stratar
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Companion package to {rppi} that builds strata for a Property Price Index
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
+Author: Vinicius Oike Reginatto
+Maintainer: Vinicius Oike Reginatto <viniciusoike@gmail.com>
 Description: More about what it does (maybe more than one line)
     Use four spaces when indenting paragraphs within the Description.
 License: MIT + file LICENSE
@@ -17,5 +17,9 @@ Imports:
     dplyr,
     glue,
     haven,
+<<<<<<< Updated upstream
     readr,
     tidyr
+=======
+    here
+>>>>>>> Stashed changes
