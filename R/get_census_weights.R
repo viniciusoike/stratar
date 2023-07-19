@@ -144,7 +144,7 @@ census_import_state <- function(state, dir = NULL, label = FALSE) {
 #'
 #' @return A named list
 census_estimate_wgt <- function(dat, type = "apartment", operation = "rent") {
-  # browser()
+
   stopifnot(is.data.frame(dat))
   stopifnot(any(type %in% c("apartment", "house")))
   stopifnot(any(operation %in% c("rent", "sale")))

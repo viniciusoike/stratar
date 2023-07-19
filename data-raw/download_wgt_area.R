@@ -70,35 +70,53 @@ clean_geometries <- function(shp) {
 
 }
 
+# Download shape files from IBGE's FTP server
 urls <- get_ftp_url()
-test = read_shapefile(urls, outdir = here::here("data-raw", "ibge"))
-clean = lapply(test, \(x) try(clean_geometries(x)))
+# Import all shape files and clean (may cause errors due to internet connection)
+test <- read_shapefile(urls, outdir = here::here("data-raw", "ibge"))
+clean <- lapply(test, \(x) try(clean_geometries(x)))
+# Removes shape files with some error
+clean <- clean[!sapply(clean, \(x) inherits(x, "try-error"))]
+clean <- dplyr::bind_rows(clean)
 
+if (all(sf::st_is_valid(clean))) {
+  # For some reason st_read imports that geometry column with a wrong name
+  fixed <- dplyr::rename(clean, geom = geometry)
+  # Create code_muni
+  fixed <- dplyr::mutate(fixed, code_muni = substr(code_weighting, 1, 7))
+  # Convert to SIRGAS-2000 CRS
+  fixed <- sf::st_transform(fixed, crs = 4674)
+}
+
+# Read weighting area shape using geobr
 area_ponderacao <- geobr::read_weighting_area(year = 2010, simplified = FALSE)
 
-fixed <- dplyr::bind_rows(clean[-c(7, 8)])
-fixed <- dplyr::rename(fixed, geom = geometry)
-fixed <- dplyr::mutate(fixed, code_muni = substr(code_weighting, 1, 7))
-fixed <- sf::st_transform(fixed, crs = 4674)
-
+# Get all unique ids on each city
 dim_city <- area_ponderacao |>
   sf::st_drop_geometry() |>
   dplyr::select(-"code_weighting") |>
   dplyr::distinct()
 
+# Join city information with the clean/fixed shape files from IBGE
 fixed <- dplyr::left_join(fixed, dim_city, by = "code_muni")
 
+# Replace the clean/fixed shape in the shape file downloaded from geobr
+
+# Get cities that were fixed
 rmcity <- unique(fixed$code_muni)
+# Check if CRS is equal
+if (sf::st_crs(area_ponderacao) == sf::st_crs(fixed)) {
 
-sf::st_crs(area_ponderacao) == sf::st_crs(fixed)
+  wgt10 <- area_ponderacao |>
+    dplyr::filter(!(code_muni %in% rmcity)) |>
+    dplyr::bind_rows(fixed)
 
-wgt10 <- area_ponderacao |>
-  dplyr::filter(!(code_muni %in% rmcity)) |>
-  dplyr::bind_rows(fixed)
+}
 
+# To improve storage filter only cities that are currenly in the Index
 index_cities <- c(
   3106200, 5300108, 4106902, 4314902, 3304557, 3550308, 2611606, 2927408
-  )
+)
 
 wgt10 <- dplyr::filter(wgt10, code_muni %in% index_cities)
 
