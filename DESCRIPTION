@@ -17,9 +17,10 @@ Imports:
     dplyr,
     glue,
     haven,
-<<<<<<< Updated upstream
     readr,
-    tidyr
-=======
-    here
->>>>>>> Stashed changes
+    tidyr,
+    here,
+    microdadosBrasil,
+    sf,
+    tibble,
+    rlang
