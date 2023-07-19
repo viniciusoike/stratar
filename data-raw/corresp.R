@@ -24,7 +24,6 @@ tracts <- lapply(
 tracts <- dplyr::bind_rows(tracts)
 tracts <- dplyr::mutate(tracts, code_tract = as.character(code_tract))
 tracts <- dplyr::left_join(tracts, dict, by = "code_tract")
-library(dplyr)
 
 test = tracts %>%
   dplyr::group_by(code_weighting) %>%
