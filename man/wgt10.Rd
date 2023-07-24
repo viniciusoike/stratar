@@ -5,7 +5,7 @@
 \alias{wgt10}
 \title{A shapefile of Census Weighting Areas for major cities in Brazil}
 \format{
-An object of class \code{sf} (inherits from \code{data.frame}) with 823 rows and 8 columns.
+An object of class \code{sf} (inherits from \code{data.frame}) with 10993 rows and 18 columns.
 }
 \usage{
 wgt10
