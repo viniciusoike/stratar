@@ -11,7 +11,7 @@ get_wgt_area <- function(city, outdir = NULL) {
   # Download shape files from IBGE's FTP server
   urls <- get_ftp_url()
   # Import all shape files and clean (may cause errors due to internet connection)
-  test <- read_shapefile(urls, outdir = dir)
+  test <- read_shapefile(urls, outdir = outdir)
   clean <- lapply(test, \(x) try(clean_geometries(x)))
   # Removes shape files with some error
   clean <- clean[!sapply(clean, \(x) inherits(x, "try-error"))]
