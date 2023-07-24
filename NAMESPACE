@@ -3,4 +3,6 @@
 export(census_estimate_wgt)
 export(census_import_state)
 export(download_census)
+export(get_census_14_muni)
 export(get_census_weights)
+export(get_wgt_area)

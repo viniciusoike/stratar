@@ -89,7 +89,7 @@ if (all(sf::st_is_valid(clean))) {
 }
 
 # Read weighting area shape using geobr
-area_ponderacao <- geobr::read_weighting_area(year = 2010, simplified = FALSE)
+area_ponderacao <- geobr::read_weighting_area(year = 2010, simplified = TRUE)
 
 # Get all unique ids on each city
 dim_city <- area_ponderacao |>
@@ -113,7 +113,7 @@ if (sf::st_crs(area_ponderacao) == sf::st_crs(fixed)) {
 
 }
 
-# To improve storage filter only cities that are currenly in the Index
+# To improve storage filter only cities that are currently in the Index
 index_cities <- c(
   3106200, 5300108, 4106902, 4314902, 3304557, 3550308, 2611606, 2927408
 )

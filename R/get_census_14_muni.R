@@ -6,7 +6,7 @@
 #' @param geo Logical indicating if Census weights should include a geometry column.
 #' Defaults to `FALSE`
 #' @param dir Directory path where the "14_municipios" data is stored
-#'
+#' @export
 #' @return Either a `tibble` (if `geo = FALSE`) or a spatial `sf` object
 #' (if `geo = TRUE`).
 get_census_14_muni <- function(geo = FALSE, dir = NULL) {
@@ -32,7 +32,6 @@ get_census_14_muni <- function(geo = FALSE, dir = NULL) {
 
   # Convert column names to lowercase
   names(domi) <- tolower(names(domi))
-  #
   census_wgt <- census_estimate_wgt(domi)
   census_wgt = get_census_weights(census_wgt)
 
@@ -54,26 +53,6 @@ get_census_14_muni <- function(geo = FALSE, dir = NULL) {
       )
 
     out <- dplyr::left_join(wgt10, census_wgt, by = c("code_weighting", "code_muni"))
-
-    # wgt <- dplyr::mutate(
-    #   wgt,
-    #   code_weighting = as.character(code_weighting),
-    #   code_muni = as.character(code_muni)
-    # )
-    #
-    # census_wgt <- dplyr::rename(census_wgt, code_weighting = code_weighting_area)
-    # census_wgt <- dplyr::mutate(
-    #   census_wgt,
-    #   code_weighting = as.character(code_weighting),
-    #   code_muni = as.character(code_muni)
-    # )
-    #
-    # out <- dplyr::left_join(
-    #   wgt10,
-    #   census_wgt,
-    #   by = c("code_weighting", "code_muni")
-    #   )
-
     return(out)
   }
 
