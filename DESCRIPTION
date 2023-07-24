@@ -23,5 +23,7 @@ Imports:
     microdadosBrasil,
     sf,
     tibble,
-    rlang
-
+    rlang,
+    purrr,
+    stringr,
+    RCurl
