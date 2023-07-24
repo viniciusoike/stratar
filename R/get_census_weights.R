@@ -11,11 +11,13 @@
 #' @param export Logical indicating if results should be exported locally. Defaults
 #' to `FALSE`.
 #' @param variable One of `count`, `income`, or `all` (default).
+#' @param tbl A `tibble` created by `census_estimate_wgt`
 #'
 #' @return A `data.table` with Census totals on columns by weighting area.
 #' @export
 get_census_weights <- function(
     state,
+    tbl,
     dir = NULL,
     export = FALSE,
     variable = "all") {
@@ -31,6 +33,13 @@ get_census_weights <- function(
     "MT", "PA", "PB", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC",
     "SE", "SP", "TO", "all"
   )
+
+  if (!missing(tbl)) {
+    wgt <- tbl
+  } else {
+
+  }
+
 
   if (!any(state %in% all_states)) {
     stop(paste("State must be one of: ", paste(all_states, collapse = ", ")))
@@ -214,7 +223,7 @@ census_estimate_wgt <- function(dat, type = "apartment", operation = "rent") {
   # Filter only valid households "private permanent households". This excludes
   # non-private households (such as prisons, or retirement homes) and inappropriate
   # housing
-  dat <- dplyr::filter(dat, hh_private == "1")
+  dat <- dplyr::filter(dat, (hh_private == "1") | (hh_private == "01"))
   dat <- dplyr::filter(dat, hh_income > 0)
 
   tbl_household <- dat |>
