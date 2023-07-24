@@ -33,11 +33,27 @@ get_census_14_muni <- function(geo = FALSE, dir = NULL) {
   # Convert column names to lowercase
   names(domi) <- tolower(names(domi))
   census_wgt <- census_estimate_wgt(domi)
-  census_wgt = get_census_weights(census_wgt)
+
+  # Stack tables together
+  out <- dplyr::bind_rows(census_wgt[c("count", "income")], .id = "variable")
+
+  out <- out |>
+    dplyr::mutate(code_muni = substr(code_weighting_area, 1, 7)) |>
+    tidyr::pivot_wider(
+      id_cols = c("code_weighting_area", "code_muni"),
+      names_from = c("variable", "hh_rooms"),
+      names_sort = TRUE,
+      values_from = "n"
+    )
+
+  tbl_census <- dplyr::full_join(out, census_wgt[["agg"]], by = "code_weighting_area")
+
 
   if (geo) {
 
-    wgt <- sf::st_make_valid(wgt10)
+    wgt_area <- get_wgt_area("all")
+    wgt <- dplyr::filter(wgt_area, code_muni %in% unique(tbl_census$code_muni))
+    wgt <- sf::st_make_valid(wgt)
 
     wgt <- wgt |>
       dplyr::mutate(
@@ -45,17 +61,17 @@ get_census_14_muni <- function(geo = FALSE, dir = NULL) {
         code_muni = as.character(.data[["code_muni"]])
       )
 
-    census_wgt <- census_wgt |>
+    tbl_census <- tbl_census |>
       dplyr::rename(c("code_weighting" = "code_weighting_area")) |>
       dplyr::mutate(
         code_weighting = as.character(.data[["code_weighting"]]),
         code_muni = as.character(.data[["code_muni"]])
       )
 
-    out <- dplyr::left_join(wgt10, census_wgt, by = c("code_weighting", "code_muni"))
+    out <- dplyr::left_join(wgt, tbl_census, by = c("code_weighting", "code_muni"))
     return(out)
   }
 
-  return(census_wgt)
+  return(tbl_census)
 
 }
