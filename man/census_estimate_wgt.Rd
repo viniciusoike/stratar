@@ -14,7 +14,7 @@ census_estimate_wgt(dat, type = "apartment", operation = "rent")
 \item{operation}{One of `rent` (default) or `sale`.}
 }
 \value{
-A named list
+A named `list`
 }
 \description{
 Estimates totals and averages by number of bedrooms and weighting areas using

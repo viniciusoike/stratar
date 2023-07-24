@@ -92,6 +92,14 @@ get_census_weights <- function(
 
 }
 
+#' Import household microdata from Census IBGE 2010
+#'
+#' @inheritParams get_census_weights
+#' @param label Logical indicating if factor labels should be returned. Defaults
+#' to `FALSE`.
+#'
+#' @return A `tibble`
+#' @export
 census_import_state <- function(state, dir = NULL, label = FALSE) {
 
   if (is.null(dir)) {
@@ -141,8 +149,8 @@ census_import_state <- function(state, dir = NULL, label = FALSE) {
 #' @param dat A `data.frame` or `data.table` imported with `census_import_census()`.
 #' @param type One of `apartment` (default) or `house`.
 #' @param operation One of `rent` (default) or `sale`.
-#'
-#' @return A named list
+#' @export
+#' @return A named `list`
 census_estimate_wgt <- function(dat, type = "apartment", operation = "rent") {
 
   stopifnot(is.data.frame(dat))
