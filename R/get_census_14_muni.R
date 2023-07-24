@@ -40,24 +40,39 @@ get_census_14_muni <- function(geo = FALSE, dir = NULL) {
 
     wgt <- sf::st_make_valid(wgt10)
 
-    wgt <- dplyr::mutate(
-      wgt,
-      code_weighting = as.character(code_weighting),
-      code_muni = as.character(code_muni)
-    )
-
-    census_wgt <- dplyr::rename(census_wgt, code_weighting = code_weighting_area)
-    census_wgt <- dplyr::mutate(
-      census_wgt,
-      code_weighting = as.character(code_weighting),
-      code_muni = as.character(code_muni)
-    )
-
-    out <- dplyr::left_join(
-      wgt10,
-      census_wgt,
-      by = c("code_weighting", "code_muni")
+    wgt <- wgt |>
+      dplyr::mutate(
+        code_weighting = as.character(.data[["code_weighting"]]),
+        code_muni = as.character(.data[["code_muni"]])
       )
+
+    census_wgt <- census_wgt |>
+      dplyr::rename(c("code_weighting" = "code_weighting_area")) |>
+      dplyr::mutate(
+        code_weighting = as.character(.data[["code_weighting"]]),
+        code_muni = as.character(.data[["code_muni"]])
+      )
+
+    out <- dplyr::left_join(wgt10, census_wgt, by = c("code_weighting", "code_muni"))
+
+    # wgt <- dplyr::mutate(
+    #   wgt,
+    #   code_weighting = as.character(code_weighting),
+    #   code_muni = as.character(code_muni)
+    # )
+    #
+    # census_wgt <- dplyr::rename(census_wgt, code_weighting = code_weighting_area)
+    # census_wgt <- dplyr::mutate(
+    #   census_wgt,
+    #   code_weighting = as.character(code_weighting),
+    #   code_muni = as.character(code_muni)
+    # )
+    #
+    # out <- dplyr::left_join(
+    #   wgt10,
+    #   census_wgt,
+    #   by = c("code_weighting", "code_muni")
+    #   )
 
     return(out)
   }

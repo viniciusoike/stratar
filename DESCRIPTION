@@ -19,4 +19,9 @@ Imports:
     haven,
     readr,
     tidyr,
-    here
+    here,
+    microdadosBrasil,
+    sf,
+    tibble,
+    rlang
+
