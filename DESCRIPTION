@@ -13,7 +13,6 @@ Depends:
     R (>= 2.10)
 RoxygenNote: 7.2.3
 Imports: 
-    data.table,
     dplyr,
     glue,
     haven,
@@ -23,7 +22,8 @@ Imports:
     microdadosBrasil,
     sf,
     tibble,
-    rlang,
     purrr,
     stringr,
-    RCurl
+    RCurl,
+    geobr,
+    zip

@@ -2,11 +2,11 @@
 #'
 #' @param city 7-digit IBGE code to filter the resulting shapefile. Defaults
 #' to 'all'
-#' @dir Optional output directory
+#' @param outdir Optional output directory. Defaults to NULL
 #'
 #' @return A `sf`
 #' @export
-get_wgt_area <- function(city, dir = NULL) {
+get_wgt_area <- function(city, outdir = NULL) {
 
   # Download shape files from IBGE's FTP server
   urls <- get_ftp_url()

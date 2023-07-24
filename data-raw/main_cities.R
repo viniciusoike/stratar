@@ -12,4 +12,4 @@ main_cities <- pop |>
   dplyr::mutate(code_muni = as.numeric(code_muni)) |>
   dplyr::left_join(id_cities, by = "code_muni")
 
-readr::write_csv(main_cities, "data/main_cities.csv")
+readr::write_csv(main_cities, "data-raw/main_cities.csv")

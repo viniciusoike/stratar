@@ -1,2 +1,2 @@
-#' A shapefile of Census Weighting Areas for major cities in Brazil
-"wgt10"
+#' A tibble containing a list of the major Brazilian cities
+"bra_main_cities"

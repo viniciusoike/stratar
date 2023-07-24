@@ -4,11 +4,13 @@
 \alias{get_wgt_area}
 \title{Get the shape file of the Census microdata}
 \usage{
-get_wgt_area(city, dir = NULL)
+get_wgt_area(city, outdir = NULL)
 }
 \arguments{
 \item{city}{7-digit IBGE code to filter the resulting shapefile. Defaults
 to 'all'}
+
+\item{outdir}{Optional output directory. Defaults to NULL}
 }
 \value{
 A `sf`
