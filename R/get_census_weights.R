@@ -4,18 +4,17 @@
 #' supports income and count weighting by number of bedrooms.
 #'
 #' @param state Two letter abbreviation of the state. This option assumes the Census
-#' microdata has been downloaded and unziped in the `dir` directory.
+#' microdata has been downloaded and unziped in the `dir` directory. Either a single
+#' state or 'all'.
 #' @param dir Path to the Census microdata directory. Defaults to `NULL` assuming
 #' standard file names.
 #' @param export Logical indicating if results should be exported locally. Defaults
 #' to `FALSE`.
 #' @param variable One of `count`, `income`, or `all` (default).
-#' @param tbl A `tibble` created by `census_estimate_wgt`.
 #'
 #' @return A `data.table` with Census totals on columns by weighting area.
 #' @export
 get_census_weights <- function(
-    tbl,
     state,
     dir = NULL,
     export = FALSE,
@@ -26,28 +25,58 @@ get_census_weights <- function(
   # Variable must be one of count, income, or all
   stopifnot(any(variable %in% c("count", "income", "all")))
 
-  if (!missing(state)) {
+  # State must be a valid 2 letter state abbreviation
+  all_states <- c(
+    "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS",
+    "MT", "PA", "PB", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC",
+    "SE", "SP", "TO", "all"
+  )
 
-    # State must be a valid 2 letter state abbreviation
-    all_states <- c(
-      "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS",
-      "MT", "PA", "PB", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC",
-      "SE", "SP", "TO"
-    )
+  if (!any(state %in% all_states)) {
+    stop(paste("State must be one of: ", paste(all_states, collapse = ", ")))
+  }
 
-    if (!any(state %in% all_states)) {
-      stop(paste("State must be one of:", paste(all_states, collapse = ", ")))
+  if (any(state == "all")) {
+    message("Reading Census microdata data for all states. This might take a while.")
+
+    wgt <- parallel::mclapply(
+      all_states,
+      get_census_weights_single,
+      dir = dir,
+      variable = variable
+      )
+
+    # Export locally if export = TRUE
+    if (isTRUE(export)) {
+      path_out <- here::here(dir, glue::glue("wgt_dom.csv"))
+      readr::write_csv(wgt, path_out)
+      message("File exported to ", path_out)
     }
 
-    # Import and process weights
-    message(glue::glue("Importing Census microdata for: {state}."))
-    dat <- census_import_state(state, dir)
-    message("Computing weights...")
-    wgt <- census_estimate_wgt(dat)
+  } else {
 
-  } else if (!missing(tbl)) {
-    wgt <- tbl
+    wgt <- get_census_weights_single(state, dir, variable)
+
+    # Export locally if export = TRUE
+    if (isTRUE(export)) {
+      path_out <- here::here(dir, glue::glue("wgt_{state}_dom.csv"))
+      readr::write_csv(wgt, path_out)
+      message("File exported to ", path_out)
+    }
+
   }
+
+  return(wgt)
+
+}
+
+get_census_weights_single <- function(state, dir, variable) {
+
+  # Import and process weights
+  message(glue::glue("Importing Census microdata for: {state}."))
+  dat <- census_import_state(state, dir)
+  message("Computing weights...")
+  wgt <- census_estimate_wgt(dat)
 
   if (variable != "all") {
     # Get the table
@@ -81,16 +110,8 @@ get_census_weights <- function(
 
   }
 
-  # Export locally if export = TRUE
-  if (isTRUE(export)) {
-    path_out <- here::here(dir, glue::glue("wgt_{state}_dom.csv"))
-    readr::write_csv(out, path_out)
-    message("File exported to ", path_out)
-  }
-
-  return(out)
-
 }
+
 
 #' Import household microdata from Census IBGE 2010
 #'
@@ -109,12 +130,14 @@ census_import_state <- function(state, dir = NULL, label = FALSE) {
   path <- list.files(dir, pattern = "dom\\.dta$", full.names = TRUE)
   path <- path[grep(paste0("_", state, "_"), path)]
 
-  # Check if only one file was found
-  stopifnot(length(filenm) >= 1)
-  # Check if file exists
-  stopifnot(file.exists(path))
-  # Import using haven
-  census <- haven::read_dta(path)
+  if (length(path == 1)) {
+    # Import using haven
+    census <- haven::read_dta(path)
+  } else {
+    # Import using haven
+    census <- parallel::mclapply(path, haven::read_dta)
+    census <- dplyr::bind_rows(census)
+  }
 
   if (label) {
     # Return labelled tibble
@@ -191,7 +214,7 @@ census_estimate_wgt <- function(dat, type = "apartment", operation = "rent") {
   # Filter only valid households "private permanent households". This excludes
   # non-private households (such as prisons, or retirement homes) and inappropriate
   # housing
-  dat <- dplyr::filter(dat, hh_private == "01")
+  dat <- dplyr::filter(dat, hh_private == "1")
   dat <- dplyr::filter(dat, hh_income > 0)
 
   tbl_household <- dat |>

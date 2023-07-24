@@ -4,13 +4,12 @@
 \alias{get_census_weights}
 \title{Compute Census Weights}
 \usage{
-get_census_weights(tbl, state, dir = NULL, export = FALSE, variable = "all")
+get_census_weights(state, dir = NULL, export = FALSE, variable = "all")
 }
 \arguments{
-\item{tbl}{A `tibble` created by `census_estimate_wgt`.}
-
 \item{state}{Two letter abbreviation of the state. This option assumes the Census
-microdata has been downloaded and unziped in the `dir` directory.}
+microdata has been downloaded and unziped in the `dir` directory. Either a single
+state or 'all'.}
 
 \item{dir}{Path to the Census microdata directory. Defaults to `NULL` assuming
 standard file names.}

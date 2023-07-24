@@ -8,7 +8,8 @@ census_import_state(state, dir = NULL, label = FALSE)
 }
 \arguments{
 \item{state}{Two letter abbreviation of the state. This option assumes the Census
-microdata has been downloaded and unziped in the `dir` directory.}
+microdata has been downloaded and unziped in the `dir` directory. Either a single
+state or 'all'.}
 
 \item{dir}{Path to the Census microdata directory. Defaults to `NULL` assuming
 standard file names.}
