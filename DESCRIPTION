@@ -17,9 +17,6 @@ Imports:
     dplyr,
     glue,
     haven,
-<<<<<<< Updated upstream
     readr,
-    tidyr
-=======
+    tidyr,
     here
->>>>>>> Stashed changes
