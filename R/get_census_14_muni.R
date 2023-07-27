@@ -16,7 +16,7 @@ get_census_14_muni <- function(geo = FALSE, dir = NULL) {
   }
 
   # Get import dictionary
-  dict <- microdadosBrasil::get_import_dictionary("CENSO", 2010, ft = "domicilios")
+  dict <- dict_census
   # Import data
   domi <- readr::read_fwf(
     file = here::here(dir, "Amostra_Domicilios_14munic.txt"),
