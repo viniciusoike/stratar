@@ -18,7 +18,7 @@ get_wgt_area <- function(city, outdir = NULL) {
   clean <- dplyr::bind_rows(clean)
 
   # For some reason st_read imports that geometry column with a wrong name
-  fixed <- dplyr::rename(clean, geom = geometry)
+  fixed <- dplyr::rename(clean, dplyr::any_of(c("geom" = "geometry")))
   # Create code_muni
   fixed <- dplyr::mutate(fixed, code_muni = substr(code_weighting, 1, 7))
   # Convert to SIRGAS-2000 CRS
@@ -47,6 +47,8 @@ get_wgt_area <- function(city, outdir = NULL) {
       dplyr::filter(!(code_muni %in% rmcity)) |>
       dplyr::bind_rows(fixed)
 
+  } else {
+    stop("Error CRS")
   }
 
   if (city != "all") {
@@ -81,6 +83,8 @@ read_shapefile <- function(url, outdir = NULL) {
 
   if (is.null(outdir)) {
     outdir <- tempdir()
+  } else {
+    outdir <- here::here(outdir)
   }
 
   for (i in seq_along(url)) {
